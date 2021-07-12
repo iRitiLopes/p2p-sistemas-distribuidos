@@ -311,7 +311,7 @@ public class Client extends Thread {
             message.setDownload();
             DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            File file = new File(filename);
+            File file = new File(directory +  "/" + filename);
             FileOutputStream fos = new FileOutputStream(file);
             byte[] filebuf = new byte[4098];
             int count;
@@ -321,6 +321,13 @@ public class Client extends Thread {
             System.out.println("Download Completo!");
             fos.close();
             socket.close();
+            Message messageToUpdate = new Message();
+            messageToUpdate.setUpdate();
+            messageToUpdate.fileToUpdate = filename;
+            sendMessage(messageToUpdate);
+            files.add(file);
+            System.out.println("arquivos atualizados");
+            System.out.println(files);
             return;
         }
     }

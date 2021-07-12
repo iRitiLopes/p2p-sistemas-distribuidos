@@ -77,11 +77,23 @@ public class Server {
                     handleSearchRequest();
                 }else if(this.request.isAlive()){
                     handleIsAliveRequest();
+                } else if(this.request.isUpdate()){
+                    handleUpdateRequest();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
+        }
+
+        private void handleUpdateRequest() {
+            System.out.println(request.serialize());
+            ClientDTO client = findClient(address, port);
+            List<ClientDTO> clientsWithFile = filesController.getOrDefault(request.fileToUpdate, new ArrayList<>());
+            System.out.println(clientsWithFile);
+            clientsWithFile.add(client);
+            System.out.println("depois de atualizar");
+            System.out.println(clientsWithFile);
         }
 
         private void handleSearchRequest() throws IOException {

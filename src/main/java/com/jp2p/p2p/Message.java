@@ -99,6 +99,14 @@ public class Message {
         return this.messageType == MessageType.DOWNLOAD_OK;
     }
 
+    public void setUpdate() {
+        messageType = MessageType.UPDATE;
+    }
+
+    public boolean isUpdate(){
+        return messageType == MessageType.UPDATE;
+    }
+
 
     public enum MessageType {
         JOIN, JOIN_OK, LEAVE, LEAVE_OK, ALIVE, ALIVE_OK, UPDATE, UPDATE_OK, SEARCH, SEARCH_OK, SEARCH_NOK, ASK_DOWNLOAD, DOWNLOAD, DOWNLOAD_OK, DOWNLOAD_NOK
@@ -112,6 +120,7 @@ public class Message {
     public String peerAddressWithFile;
     public int peerPortWithFile;
     public String fileToDownload;
+    public String fileToUpdate;
 
     public Message() {
         filenames = new ArrayList<>();
