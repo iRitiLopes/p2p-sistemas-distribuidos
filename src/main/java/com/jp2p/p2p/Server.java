@@ -232,7 +232,6 @@ public class Server {
     private ClientDTO findClient(InetAddress address, int port){
         for(ClientDTO client: clients){
             if(client.address.toString().equals(address.toString()) && client.port == port){
-                System.out.println("IGUAL");
                 return client;
             }
         }
