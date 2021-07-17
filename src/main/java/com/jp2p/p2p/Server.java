@@ -105,6 +105,9 @@ public class Server {
 
         }
 
+        /*
+        Método responsável de lidar quando o cliente faz uma requisição de LEAVE
+         */
         private void handleLeaveRequest() throws IOException {
             System.out.println("Peer - " + address + ":" + port + "IS LEAVING!");
             ClientDTO clientDTO = findClient(address, port);
@@ -265,7 +268,9 @@ public class Server {
         }
 
     }
-
+    /*
+    Método que lida com as requisições dos clientes
+     */
     private void handleRequest() throws IOException {
         buffer = new byte[4098];
         packet = new DatagramPacket(buffer, buffer.length);

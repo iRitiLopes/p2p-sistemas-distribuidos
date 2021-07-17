@@ -82,6 +82,9 @@ public class Client extends Thread {
     }
 
     private class AliveHandler extends Thread {
+        /*
+        Classe do cliente responsável para lidar com as mensagens de ALIVE
+         */
         private byte[] buf = new byte[4098];
         private DatagramPacket packet;
         private InetAddress serverKeepAliveAddress;
@@ -100,6 +103,9 @@ public class Client extends Thread {
             }
         }
 
+        /*
+        Método que responde com ALIVE_OK
+         */
         private void handleAliveRequest() throws IOException {
             Message message = new Message();
             message.setAliveOK();
@@ -122,6 +128,9 @@ public class Client extends Thread {
         }
     }
 
+    /*
+    Classe interna responsável de lidar com o pedido de Download de outro Peer via TCP
+     */
     private class DownloadHandler extends Thread {
         ServerSocket serverSocket;
         DatagramSocket downloadUDPSocket;
@@ -149,6 +158,9 @@ public class Client extends Thread {
             }
         }
 
+        /*
+        Método que faz a comunicação com o PEER e envia o arquivo para o PEER que pediu!
+         */
         private void handleDownloadRequest(Message message) throws IOException {
             File file = null;
             Message response = new Message();
@@ -307,6 +319,9 @@ public class Client extends Thread {
         }
     }
 
+    /*
+    Método do PEER que faz o pedido de download de um arquivo para outro PEER
+     */
     private void handleAskDownloadRequest(Message message) throws IOException {
         String filename = message.fileToDownload;
         String host = message.peerToRequestDownload.split(":")[0];
@@ -318,6 +333,10 @@ public class Client extends Thread {
             System.out.println("Peer " + host + ":" + port + " negou o Download!");
             return;
         }
+
+        /*
+        Se DOWNLOAD_OK então conecta via TCP ao PEER e começa a efetuar o download do arquivo
+         */
         if (response.isDownloadOK()) {
             Socket socket = new Socket(host, port + 3);
             message = new Message();
@@ -334,6 +353,10 @@ public class Client extends Thread {
             System.out.println("Arquivo " + filename + " baixado com sucesso na pasta - " + directory);
             fos.close();
             socket.close();
+
+            /*
+            Envia mensagem ao Servidor avisando que ouve um UPDATE após o DOWNLOAD
+             */
             Message messageToUpdate = new Message();
             messageToUpdate.setUpdate();
             messageToUpdate.fileToUpdate = filename;
@@ -343,10 +366,16 @@ public class Client extends Thread {
         }
     }
 
+    /*
+    Método que envia a mensagem de LEAVE ao server
+     */
     private void handleLeaveRequest(Message message) throws IOException {
         sendMessage(message);
     }
 
+    /*
+    Método que lida com o SEARCH de um arquivo e a resposta do SERVER
+     */
     private void handleSearchRequest(Message message) throws IOException {
         sendMessage(message);
         Message response = readMessage();
