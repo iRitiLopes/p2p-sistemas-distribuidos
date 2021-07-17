@@ -1,12 +1,9 @@
 package com.jp2p.p2p;
 
-import com.google.gson.Gson;
-
 import java.net.*;
 import java.io.*;
 import java.time.Duration;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Server {
     private class ClientDTO {
@@ -14,22 +11,24 @@ public class Server {
         int port;
         int keepAlivePort;
 
-        public ClientDTO(InetAddress address, int port){
+        public ClientDTO(InetAddress address, int port) {
             this.address = address;
             this.port = port;
             this.keepAlivePort = port + 1;
         }
 
-        @Override public String toString() {
+        @Override
+        public String toString() {
             return "ClientDTO{" + "address=" + address + ", port=" + port + ", keepAlivePort=" + keepAlivePort + '}';
         }
     }
 
     private class KeepAlive extends Thread {
-        @Override public void run() {
-            while(true){
+        @Override
+        public void run() {
+            while (true) {
                 List<ClientHandler> toRemoveClients = new ArrayList<>();
-                for(ClientDTO client: clients){
+                for (ClientDTO client : clients) {
                     ClientHandler clientHandler = new ClientHandler(client.address, client.port);
                     toRemoveClients.add(clientHandler);
                     clientHandler.checkKeepAlive();
@@ -39,15 +38,15 @@ public class Server {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                for(ClientHandler client : toRemoveClients){
-                    if(!client.isAlive){
+                for (ClientHandler client : toRemoveClients) {
+                    if (!client.isAlive) {
                         ClientDTO clientToRemove = findClient(client.address, client.port);
                         assert clientToRemove != null;
                         System.out.println("Peer - " + clientToRemove.address + ":" + clientToRemove.port + " morto!");
                         clients.remove(clientToRemove);
                         removeClientsFiles(clientToRemove);
 
-                    }else{
+                    } else {
                         System.out.println("Client - " + client.address + ":" + client.port + "is Alive");
                     }
                 }
@@ -58,11 +57,11 @@ public class Server {
     private void removeClientsFiles(ClientDTO clientToRemove) {
         List<String> clientFiles = new ArrayList<>();
         filesController.forEach((filename, clients) -> {
-            if(clients.contains(clientToRemove)){
+            if (clients.contains(clientToRemove)) {
                 clientFiles.add(filename);
             }
         });
-        for(String filename : clientFiles){
+        for (String filename : clientFiles) {
             List<ClientDTO> clients = filesController.get(filename);
             clients.remove(clientToRemove);
             filesController.put(filename, clients);
@@ -86,17 +85,18 @@ public class Server {
             this.request = message;
         }
 
-        @Override public void run() {
+        @Override
+        public void run() {
             try {
                 if (this.request.isJoinRequest()) {
                     handleJoinRequest();
-                }else if(this.request.isSearchRequest()){
+                } else if (this.request.isSearchRequest()) {
                     handleSearchRequest();
-                }else if(this.request.isAlive()){
+                } else if (this.request.isAlive()) {
                     handleIsAliveRequest();
-                } else if(this.request.isUpdate()){
+                } else if (this.request.isUpdate()) {
                     handleUpdateRequest();
-                } else if(this.request.isLeave()){
+                } else if (this.request.isLeave()) {
                     handleLeaveRequest();
                 }
             } catch (Exception e) {
@@ -138,14 +138,14 @@ public class Server {
             List<ClientDTO> clientsWithFileFiltered = new ArrayList<>();
 
             clientsWithFile.forEach(client -> {
-                if(client.port != port){
+                if (client.port != port) {
                     clientsWithFileFiltered.add(client);
-                }else if(!client.address.toString().equals(address.toString())){
+                } else if (!client.address.toString().equals(address.toString())) {
                     clientsWithFileFiltered.add(client);
                 }
             });
 
-            if(clientsWithFileFiltered.isEmpty()){
+            if (clientsWithFileFiltered.isEmpty()) {
                 message.setSearchNOK();
                 sendMessage(message);
                 return;
@@ -165,6 +165,7 @@ public class Server {
         private void handleIsAliveRequest() throws IOException {
             sendCheckAlive(this.request);
         }
+
         /*
         Metodo responsável de lidar com o pedido de JOIN do cliente, adiciona os arquivos do cliente ao controle do servidor
          */
@@ -187,23 +188,23 @@ public class Server {
         /*
         Metodo onde acontece a checagem do ALIVE, envio de mensagens e tratativas
          */
-        private void sendCheckAlive(Message message) throws  IOException {
+        private void sendCheckAlive(Message message) throws IOException {
             byte[] buf;
             buf = message.serialize().getBytes();
             DatagramSocket keepAliveSocket = new DatagramSocket();
             keepAliveSocket.setSoTimeout(30000);
             DatagramPacket pkt = new DatagramPacket(buf, buf.length, address, keepAlivePort);
             keepAliveSocket.send(pkt);
-            try{
+            try {
                 buf = new byte[4098];
                 pkt = new DatagramPacket(buf, buf.length, address, keepAlivePort);
                 keepAliveSocket.receive(pkt);
                 String response = new String(pkt.getData());
                 Message respMessage = Message.fromString(response);
-                if (respMessage.isAliveOK()){
+                if (respMessage.isAliveOK()) {
                     isAlive = true;
                 }
-            } catch (SocketTimeoutException e){
+            } catch (SocketTimeoutException e) {
                 isAlive = false;
             }
         }
@@ -216,13 +217,13 @@ public class Server {
                 List<ClientDTO> clientsWithFile = filesController.get(filename);
 
                 boolean found = false;
-                for(ClientDTO client : clientsWithFile){
-                    if(client.address.equals(address) && client.port == port){
+                for (ClientDTO client : clientsWithFile) {
+                    if (client.address.equals(address) && client.port == port) {
                         found = true;
                         break;
                     }
                 }
-                if(!found){
+                if (!found) {
                     clientsWithFile.add(new ClientDTO(address, port));
                 }
                 filesController.put(filename, clientsWithFile);
@@ -268,6 +269,7 @@ public class Server {
         }
 
     }
+
     /*
     Método que lida com as requisições dos clientes
      */
@@ -289,9 +291,9 @@ public class Server {
         client.handle(message);
     }
 
-    private ClientDTO findClient(InetAddress address, int port){
-        for(ClientDTO client: clients){
-            if(client.address.toString().equals(address.toString()) && client.port == port){
+    private ClientDTO findClient(InetAddress address, int port) {
+        for (ClientDTO client : clients) {
+            if (client.address.toString().equals(address.toString()) && client.port == port) {
                 return client;
             }
         }
@@ -311,7 +313,7 @@ public class Server {
         Scanner scanner = new Scanner(System.in);
         String input = scanner.nextLine();
         int port = input.isEmpty() ? 10098 : Integer.parseInt(input);
-        if(args.length == 1){
+        if (args.length == 1) {
             port = Integer.parseInt(args[0]);
         }
         (new Server(port)).listen();
