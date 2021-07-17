@@ -9,6 +9,8 @@ import java.util.List;
 
 import com.google.gson.*;
 
+
+//Classe responsavel para troca de mensagens. Transforma o JSON em objeto e vice-versa. Possui propriedades que auxiliam na comunicação
 public class Message {
 
     public static Message fromPacket(DatagramPacket packet) {
@@ -103,7 +105,7 @@ public class Message {
         messageType = MessageType.UPDATE;
     }
 
-    public boolean isUpdate(){
+    public boolean isUpdate() {
         return messageType == MessageType.UPDATE;
     }
 

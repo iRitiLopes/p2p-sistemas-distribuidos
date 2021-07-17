@@ -43,8 +43,10 @@ public class Server {
                     if(!client.isAlive){
                         ClientDTO clientToRemove = findClient(client.address, client.port);
                         assert clientToRemove != null;
-                        System.out.println("Removing client - " + clientToRemove.address + ":" + clientToRemove.port + " Due to inactivity");
+                        System.out.println("Peer - " + clientToRemove.address + ":" + clientToRemove.port + " morto!");
                         clients.remove(clientToRemove);
+                        removeClientsFiles(clientToRemove);
+
                     }else{
                         System.out.println("Client - " + client.address + ":" + client.port + "is Alive");
                     }
@@ -52,6 +54,21 @@ public class Server {
             }
         }
     }
+
+    private void removeClientsFiles(ClientDTO clientToRemove) {
+        List<String> clientFiles = new ArrayList<>();
+        filesController.forEach((filename, clients) -> {
+            if(clients.contains(clientToRemove)){
+                clientFiles.add(filename);
+            }
+        });
+        for(String filename : clientFiles){
+            List<ClientDTO> clients = filesController.get(filename);
+            clients.remove(clientToRemove);
+            filesController.put(filename, clients);
+        }
+    }
+
     private class ClientHandler extends Thread {
         private final int keepAlivePort;
         final InetAddress address;
@@ -79,6 +96,8 @@ public class Server {
                     handleIsAliveRequest();
                 } else if(this.request.isUpdate()){
                     handleUpdateRequest();
+                } else if(this.request.isLeave()){
+                    handleLeaveRequest();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -86,18 +105,30 @@ public class Server {
 
         }
 
-        private void handleUpdateRequest() {
-            System.out.println(request.serialize());
-            ClientDTO client = findClient(address, port);
-            List<ClientDTO> clientsWithFile = filesController.getOrDefault(request.fileToUpdate, new ArrayList<>());
-            System.out.println(clientsWithFile);
-            clientsWithFile.add(client);
-            System.out.println("depois de atualizar");
-            System.out.println(clientsWithFile);
+        private void handleLeaveRequest() throws IOException {
+            System.out.println("Peer - " + address + ":" + port + "IS LEAVING!");
+            ClientDTO clientDTO = findClient(address, port);
+            Message response = new Message();
+            response.setLeaveOK();
+            removeClientsFiles(clientDTO);
+            clients.remove(clientDTO);
+            sendMessage(response);
         }
 
+        /*
+        Método responsável de lidar com o UPDATE de arquivo de um cliente, logo após um DOWNLOAD ter sido concluido
+         */
+        private void handleUpdateRequest() {
+            ClientDTO client = findClient(address, port);
+            List<ClientDTO> clientsWithFile = filesController.getOrDefault(request.fileToUpdate, new ArrayList<>());
+            clientsWithFile.add(client);
+        }
+
+        /*
+        Mẽtodo responsável de lidar com o pedido de SEARCH do cliente, buscando qual cliente possui o arquivo pedido
+         */
         private void handleSearchRequest() throws IOException {
-            System.out.println(address.toString() + ":" + port + " Searching for - File: " + request.fileToSearch);
+            System.out.println("Peer: " + address.toString() + ":" + port + " Searching for - File: " + request.fileToSearch);
             List<ClientDTO> clientsWithFile = filesController.getOrDefault(request.fileToSearch, new ArrayList<>());
             Message message = new Message();
 
@@ -125,12 +156,17 @@ public class Server {
 
         }
 
+        /*
+        Metodo responsãvel de lidar com ALIVE dos clientes, para saber se ainda estão vivos
+         */
         private void handleIsAliveRequest() throws IOException {
             sendCheckAlive(this.request);
         }
-
+        /*
+        Metodo responsável de lidar com o pedido de JOIN do cliente, adiciona os arquivos do cliente ao controle do servidor
+         */
         private void handleJoinRequest() throws IOException {
-            System.out.println(address.toString() + ":" + port + " ASK TO JOIN - Files: " + request.filenames.toString());
+            System.out.println("Peer: " + address.toString() + ":" + port + " ASK TO JOIN - Files: " + request.filenames.toString());
             addFilesToController();
             Message response = new Message();
             response.setJoinOK();
@@ -144,6 +180,10 @@ public class Server {
             socket.send(pkt);
         }
 
+
+        /*
+        Metodo onde acontece a checagem do ALIVE, envio de mensagens e tratativas
+         */
         private void sendCheckAlive(Message message) throws  IOException {
             byte[] buf;
             buf = message.serialize().getBytes();
@@ -187,13 +227,14 @@ public class Server {
         }
 
         public void handle(Message message) {
+            System.out.println(message.serialize());
             setRequest(message);
             start();
         }
 
         public void checkKeepAlive() {
             isAlive = false;
-            System.out.println("Checking client - " + address + ":" + port + " if is alive!");
+            System.out.println("Checking peer - " + address + ":" + port + " if is alive!");
             Message message = new Message();
             message.setAlive();
             handle(message);
@@ -203,17 +244,19 @@ public class Server {
 
     DatagramSocket socket;
     DatagramPacket packet;
+    int serverPort = 10098;
     byte[] buffer = new byte[4098];
     List<ClientDTO> clients;
     Map<String, List<ClientDTO>> filesController;
 
-    Server() {
+    Server(int port) {
+        this.serverPort = port > 0 ? port : 10098;
         clients = new ArrayList<ClientDTO>();
         filesController = new HashMap<>();
     }
 
     public void listen() throws IOException {
-        socket = new DatagramSocket(10000);
+        socket = new DatagramSocket(10098);
         KeepAlive keepAlive = new KeepAlive();
         keepAlive.start();
         while (true) {
@@ -259,6 +302,13 @@ public class Server {
     }
 
     public static void main(String[] args) throws Exception {
-        (new Server()).listen();
+        System.out.println("Qual a porta do servidor: [default -> 10098]");
+        Scanner scanner = new Scanner(System.in);
+        String input = scanner.nextLine();
+        int port = input.isEmpty() ? 10098 : Integer.parseInt(input);
+        if(args.length == 1){
+            port = Integer.parseInt(args[0]);
+        }
+        (new Server(port)).listen();
     }
 }

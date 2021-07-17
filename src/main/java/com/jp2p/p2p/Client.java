@@ -10,6 +10,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Client extends Thread {
+    /*
+    Classe responsável de interagir com o usuário e capturar a mensagem
+     */
     public static class Menu {
         void show() {
             System.out.println("1 - SEARCH <nome do arquivo que procura>");
@@ -21,7 +24,7 @@ public class Client extends Thread {
             String[] splitMessage;
             splitMessage = read();
             while (!isValid(splitMessage)) {
-                System.out.println("Escolha inválida");
+                System.out.println("Mensagem inválida. Por favor repita.");
                 show();
                 splitMessage = read();
             }
@@ -40,7 +43,9 @@ public class Client extends Thread {
         private boolean isValid(String[] splitMessage) {
             switch (splitMessage[0]) {
                 case "1":
+                    return splitMessage.length == 2;
                 case "2":
+                    return splitMessage.length == 3;
                 case "3":
                     return true;
                 default:
@@ -82,10 +87,11 @@ public class Client extends Thread {
         private InetAddress serverKeepAliveAddress;
         private int serverKeepAlivePort;
 
-        @Override public void run() {
-            while(true){
+        @Override
+        public void run() {
+            while (true) {
                 try {
-                    if(readMessageAlive().isAlive()){
+                    if (readMessageAlive().isAlive()) {
                         handleAliveRequest();
                     }
                 } catch (IOException e) {
@@ -93,6 +99,7 @@ public class Client extends Thread {
                 }
             }
         }
+
         private void handleAliveRequest() throws IOException {
             Message message = new Message();
             message.setAliveOK();
@@ -123,16 +130,17 @@ public class Client extends Thread {
         boolean isDownloading = false;
         byte[] buf = new byte[4098];
 
-        DownloadHandler(DatagramSocket udpSocket, ServerSocket tcpSocket){
+        DownloadHandler(DatagramSocket udpSocket, ServerSocket tcpSocket) {
             this.downloadUDPSocket = udpSocket;
             this.serverSocket = tcpSocket;
         }
 
-        @Override public void run() {
-            while (true){
+        @Override
+        public void run() {
+            while (true) {
                 try {
                     Message message = readUDPMessage();
-                    if(message.isDownloadRequest()){
+                    if (message.isDownloadRequest()) {
                         handleDownloadRequest(message);
                     }
                 } catch (IOException e) {
@@ -145,18 +153,18 @@ public class Client extends Thread {
             File file = null;
             Message response = new Message();
             response.setDownloadNOK();
-            if(isDownloading){
+            if (isDownloading) {
                 sendMessage(response);
                 return;
             }
-            for(File f: files){
-                if(f.getName().equals(message.fileToDownload)){
+            for (File f : files) {
+                if (f.getName().equals(message.fileToDownload)) {
                     response.setDownloadOK();
                     file = f;
                 }
             }
             sendMessage(response, addressUDPToResponse, portUPDToResponse);
-            if(file == null){
+            if (file == null) {
                 return;
             }
 
@@ -168,7 +176,7 @@ public class Client extends Thread {
 
             int length = 0;
             long progress = 0;
-            while((length = fis.read(filebuf, 0, filebuf.length)) != -1){
+            while ((length = fis.read(filebuf, 0, filebuf.length)) != -1) {
                 out.write(filebuf, 0, length);
                 out.flush();
                 progress += length;
@@ -212,11 +220,12 @@ public class Client extends Thread {
     private final ServerSocket downloadTCPSocket;
     private DatagramPacket packet;
     private InetAddress addr = InetAddress.getByName("localhost");
-    private int port = 10000;
+    private int port = 10098;
     private byte[] buf;
 
 
-    public Client(String directory) throws Exception {
+    public Client(String directory, int serverPort) throws Exception {
+        this.port = serverPort;
         this.udpSocket = new DatagramSocket();
         this.heartbeatSocket = new DatagramSocket(udpSocket.getLocalPort() + 1);
         this.downloadUDPSocket = new DatagramSocket(udpSocket.getLocalPort() + 2);
@@ -242,6 +251,7 @@ public class Client extends Thread {
         packet = new DatagramPacket(this.buf, this.buf.length, addr, port);
         this.udpSocket.send(packet);
     }
+
     public void sendMessage(Message message, InetAddress address, int port) throws IOException {
         this.buf = message.serialize().getBytes();
         packet = new DatagramPacket(this.buf, this.buf.length, address, port);
@@ -249,7 +259,6 @@ public class Client extends Thread {
     }
 
     public Message readMessage() throws IOException {
-        //return new Gson().fromJson(in.readLine(), Message.class);
         this.buf = new byte[4098];
         packet = new DatagramPacket(this.buf, this.buf.length);
         udpSocket.receive(packet);
@@ -257,7 +266,8 @@ public class Client extends Thread {
         return Message.fromString(response);
     }
 
-    @Override public void run() {
+    @Override
+    public void run() {
         try {
             //connect();
 
@@ -279,16 +289,19 @@ public class Client extends Thread {
             downloadHandler.start();
             menu.show();
             message = menu.captureMessage();
-            while (!parsedResponse.isLeave()) {
+            while (!message.isLeave()) {
                 if (message.isSearchRequest()) {
                     handleSearchRequest(message);
-                }else if(message.isAskDownload()){
+                } else if (message.isAskDownload()) {
                     handleAskDownloadRequest(message);
                 }
                 menu.show();
                 message = menu.captureMessage();
             }
             handleLeaveRequest(message);
+            aliveHandler.interrupt();
+            downloadHandler.interrupt();
+            interrupt();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -301,24 +314,24 @@ public class Client extends Thread {
         message.setDownload();
         sendMessage(message, InetAddress.getByName(host), port + 2);
         Message response = readMessage();
-        if(response.isDownloadNOK()){
-            System.out.println("Download negado!");
+        if (response.isDownloadNOK()) {
+            System.out.println("Peer " + host + ":" + port + " negou o Download!");
             return;
         }
-        if(response.isDownloadOK()){
+        if (response.isDownloadOK()) {
             Socket socket = new Socket(host, port + 3);
             message = new Message();
             message.setDownload();
             DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            File file = new File(directory +  "/" + filename);
+            File file = new File(directory + "/" + filename);
             FileOutputStream fos = new FileOutputStream(file);
             byte[] filebuf = new byte[4098];
             int count;
-            while((count = in.read(filebuf)) != -1){
+            while ((count = in.read(filebuf)) != -1) {
                 fos.write(filebuf, 0, count);
             }
-            System.out.println("Download Completo!");
+            System.out.println("Arquivo " + filename + " baixado com sucesso na pasta - " + directory);
             fos.close();
             socket.close();
             Message messageToUpdate = new Message();
@@ -326,15 +339,12 @@ public class Client extends Thread {
             messageToUpdate.fileToUpdate = filename;
             sendMessage(messageToUpdate);
             files.add(file);
-            System.out.println("arquivos atualizados");
-            System.out.println(files);
             return;
         }
     }
 
     private void handleLeaveRequest(Message message) throws IOException {
         sendMessage(message);
-        closeSocket();
     }
 
     private void handleSearchRequest(Message message) throws IOException {
@@ -348,20 +358,18 @@ public class Client extends Thread {
         }
     }
 
-    private void closeSocket() throws IOException {
-        in.close();
-        out.close();
-        clientSocket.close();
-    }
-
 
     public static void main(String[] args) throws Exception {
-        if(args.length < 1){
-            System.out.println("Necessita argumento com o diretorio dos arquivos");
-            return;
-        }
-        String path = args[0];
-        Client client = new Client(path);
+        System.out.println("Qual a porta do servidor: [default -> 10098]");
+        Scanner scanner = new Scanner(System.in);
+        String input = scanner.nextLine();
+        int port = input.isEmpty() ? 10098 : Integer.parseInt(input);
+
+        System.out.println("Qual a pasta com os arquivos? ");
+        String path = scanner.next();
+        Client client = new Client(path, port);
         client.start();
+        client.join();
+        System.exit(0);
     }
 }
