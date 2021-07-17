@@ -1,6 +1,7 @@
 Para compilar, será necessário a JDK 1.8 instalada em seu computador, como requisitada préviamente no projeto
 
 Projeto foi desenvolvido com a ferramenta MAVEN para gerenciar a dependencia do GSON(Biblioteca autorizada pelo professor para o uso)
+E facilitar a compilação do projeto
 
 Para compilar:
     Dentro do projeto existe dois executáveis:
@@ -9,14 +10,12 @@ Para compilar:
 
     Dependendo de sua plataforma execute-o com o seguintes argumentos
     - ./mvnw clean compile assembly:single
-    - mvnw.cmd clean compile assembly:single
+    - ./mvnw.cmd clean compile assembly:single
 
     Isso irá baixar a depêndencia do GSON, compilar e gerar o JAR com as dependências na pasta ./target dentro do projeto
 
 
 Para executar:
-    O Server:
-        ./mvnw exec:java -Dexec.mainClass="com.jp2p.p2p.Server"
-    O Peer/Client
-        ./mvnw exec:java -Dexec.mainClass="com.jp2p.p2p.Client"
+    O Server: java -cp ./target/p2p-1.0-SNAPSHOT-jar-with-dependencies.jar com.jp2p.p2p.Server
+    O Peer/Client: java -cp ./target/p2p-1.0-SNAPSHOT-jar-with-dependencies.jar com.jp2p.p2p.Client
 
