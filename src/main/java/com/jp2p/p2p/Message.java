@@ -119,16 +119,16 @@ public class Message {
     ArrayList<String> filenames;
     String fileToSearch;
     public String peerToRequestDownload;
-    public String peerAddressWithFile;
-    public int peerPortWithFile;
+    public List<String> clientsWithFile;
+    public List<Integer> peerPortWithFile;
     public String fileToDownload;
     public String fileToUpdate;
 
     public Message() {
         filenames = new ArrayList<>();
         fileToSearch = "";
-        peerAddressWithFile = "";
-        peerPortWithFile = -1;
+        clientsWithFile = new ArrayList<>();
+        peerPortWithFile = new ArrayList<>();
     }
 
     public void setJoinOK() {

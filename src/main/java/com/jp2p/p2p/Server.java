@@ -4,6 +4,7 @@ import java.net.*;
 import java.io.*;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Server {
     private class ClientDTO {
@@ -42,28 +43,36 @@ public class Server {
                     if (!client.isAlive) {
                         ClientDTO clientToRemove = findClient(client.address, client.port);
                         assert clientToRemove != null;
-                        System.out.println("Peer - " + clientToRemove.address + ":" + clientToRemove.port + " morto!");
+                        System.out.println("Peer - " + clientToRemove.address + ":" + clientToRemove.port + " morto. Eliminando seus arquivos: " + findClientFiles(findClient(clientToRemove.address, clientToRemove.port)));
                         clients.remove(clientToRemove);
                         removeClientsFiles(clientToRemove);
 
                     } else {
-                        System.out.println("Client - " + client.address + ":" + client.port + "is Alive");
+                        System.out.println("Peer - " + client.address + ":" + client.port + " está vivo");
                     }
                 }
             }
         }
     }
 
-    private void removeClientsFiles(ClientDTO clientToRemove) {
+    private List<String> findClientFiles(ClientDTO client){
         List<String> clientFiles = new ArrayList<>();
         filesController.forEach((filename, clients) -> {
-            if (clients.contains(clientToRemove)) {
-                clientFiles.add(filename);
+            for(ClientDTO fclient : clients){
+                if(fclient.address.equals(client.address) && fclient.port == client.port){
+                    clientFiles.add(filename);
+                }
             }
         });
+        return clientFiles;
+    }
+
+    private void removeClientsFiles(ClientDTO clientToRemove) {
+        List<String> clientFiles = findClientFiles(clientToRemove);
         for (String filename : clientFiles) {
             List<ClientDTO> clients = filesController.get(filename);
-            clients.remove(clientToRemove);
+            ClientDTO c = clients.stream().filter(client -> client.address.equals(clientToRemove.address) && client.port == clientToRemove.port).collect(Collectors.toList()).get(0);
+            clients.remove(c);
             filesController.put(filename, clients);
         }
     }
@@ -109,7 +118,7 @@ public class Server {
         Método responsável de lidar quando o cliente faz uma requisição de LEAVE
          */
         private void handleLeaveRequest() throws IOException {
-            System.out.println("Peer - " + address + ":" + port + "IS LEAVING!");
+            System.out.println("Peer - " + address + ":" + port + "LEAVING!");
             ClientDTO clientDTO = findClient(address, port);
             Message response = new Message();
             response.setLeaveOK();
@@ -131,7 +140,7 @@ public class Server {
         Mẽtodo responsável de lidar com o pedido de SEARCH do cliente, buscando qual cliente possui o arquivo pedido
          */
         private void handleSearchRequest() throws IOException {
-            System.out.println("Peer: " + address.toString() + ":" + port + " Searching for - File: " + request.fileToSearch);
+            System.out.println("Peer: " + address.toString() + ":" + port + " solicitou o arquivo: " + request.fileToSearch);
             List<ClientDTO> clientsWithFile = filesController.getOrDefault(request.fileToSearch, new ArrayList<>());
             Message message = new Message();
 
@@ -152,8 +161,8 @@ public class Server {
             }
 
             message.setSearchOK();
-            message.peerAddressWithFile = clientsWithFileFiltered.get(0).address.toString();
-            message.peerPortWithFile = clientsWithFileFiltered.get(0).port;
+            message.clientsWithFile = clientsWithFileFiltered.stream().map(clients -> clients.address.toString()).collect(Collectors.toList());
+            message.peerPortWithFile = clientsWithFileFiltered.stream().map(client -> client.port).collect(Collectors.toList());
             System.out.println(message.serialize());
             sendMessage(message);
 
@@ -170,7 +179,7 @@ public class Server {
         Metodo responsável de lidar com o pedido de JOIN do cliente, adiciona os arquivos do cliente ao controle do servidor
          */
         private void handleJoinRequest() throws IOException {
-            System.out.println("Peer: " + address.toString() + ":" + port + " ASK TO JOIN - Files: " + request.filenames.toString());
+            System.out.println("Peer: " + address.toString() + ":" + port + " adicionado com os arquivos: " + request.filenames.toString());
             addFilesToController();
             Message response = new Message();
             response.setJoinOK();
@@ -231,7 +240,6 @@ public class Server {
         }
 
         public void handle(Message message) {
-            System.out.println(message.serialize());
             setRequest(message);
             start();
         }

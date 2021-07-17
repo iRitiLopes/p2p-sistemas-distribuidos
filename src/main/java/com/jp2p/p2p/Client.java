@@ -297,6 +297,7 @@ public class Client extends Thread {
             if (!parsedResponse.isJoinOK()) {
                 return;
             }
+            System.out.println("Sou o peer: " + udpSocket.getLocalAddress().toString() + ":" + udpSocket.getLocalPort() + " com os arquivos: " + files);
             aliveHandler.start();
             downloadHandler.start();
             menu.show();
@@ -330,7 +331,7 @@ public class Client extends Thread {
         sendMessage(message, InetAddress.getByName(host), port + 2);
         Message response = readMessage();
         if (response.isDownloadNOK()) {
-            System.out.println("Peer " + host + ":" + port + " negou o Download!");
+            System.out.println("Peer " + host + ":" + port + " negou o Download! Peça para o proximo");
             return;
         }
 
@@ -382,8 +383,10 @@ public class Client extends Thread {
         if (response.isSearchNOK()) {
             System.out.println("Arquivo não encontrado");
         } else if (response.isSearchOK()) {
-            System.out.println("Arquivo encontrado!\nPeers com o arquivo:");
-            System.out.println(response.peerAddressWithFile + ":" + response.peerPortWithFile);
+            System.out.println("Peers com o arquivo solicitado:");
+            for(int i = 0; i < response.clientsWithFile.size(); i ++){
+                System.out.println(response.clientsWithFile.get(i) + ":" + response.peerPortWithFile.get(i));
+            }
         }
     }
 
